@@ -12,9 +12,9 @@ public class SmartBankingSystem {
     private static Map<Integer, Account> accounts = new HashMap<>();
     private static List<Transaction> transactions = new ArrayList<>();
 
-    private static int customerIdCounter = 0;
-    private static int accountNumberCounter = 0;
-    private static int txnIdCounter = 0;
+    private static int customerIdCounter = 1;
+    private static int accountNumberCounter = 1;
+    private static int txnIdCounter = 1;
 
     private static Scanner scanner = new Scanner(System.in);
 
