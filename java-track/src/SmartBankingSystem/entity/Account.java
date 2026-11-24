@@ -1,4 +1,4 @@
-package SmartBankingSystem;
+package SmartBankingSystem.entity;
 
 public class Account {
     private int accountNumber;

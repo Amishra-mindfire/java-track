@@ -1,4 +1,4 @@
-package SmartBankingSystem;
+package SmartBankingSystem.entity;
 
 public class Customer {
     private int customerId;

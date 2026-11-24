@@ -1,14 +1,17 @@
-package SmartBankingSystem;
+package SmartBankingSystem.entity;
+
+import SmartBankingSystem.enums.TransactionStatus;
+import SmartBankingSystem.enums.TransactionType;
 
 public class Transaction {
     private String transactionId;
-    private String type;
+    private TransactionType type;
     private int fromAccount;
     private int toAccount;
     private double amount;
-    private String status;
+    private TransactionStatus status;
 
-    public Transaction(String transactionId, String type, int fromAccount, int toAccount, double amount, String status) {
+    public Transaction(String transactionId, TransactionType type, int fromAccount, int toAccount, double amount, TransactionStatus status) {
         this.transactionId = transactionId;
         this.type = type;
         this.fromAccount = fromAccount;
@@ -26,5 +29,13 @@ public class Transaction {
                 (toAccount == 0 ? "N/A" : toAccount),
                 amount,
                 status);
+    }
+
+    public boolean isFromValidAccount(int accNo) {
+        return this.fromAccount == accNo || this.toAccount == accNo;
+    }
+
+    public String getTransactionId() {
+        return transactionId;
     }
 }
