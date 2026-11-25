@@ -3,168 +3,167 @@ package SmartBankingSystem;
 import java.util.List;
 import java.util.Scanner;
 
+import SmartBankingSystem.controller.BankingController;
 import SmartBankingSystem.entity.Account;
 import SmartBankingSystem.entity.Customer;
 import SmartBankingSystem.entity.Transaction;
-import SmartBankingSystem.service.SmartBankingSystem;
+import SmartBankingSystem.exception.BankingException;
 import SmartBankingSystem.service.SmartBankingSystemImpl;
+import SmartBankingSystem.util.BankingConstants;
+import SmartBankingSystem.util.CurrencyFormatter;
 
+/**
+ * Console user interface for the Smart Banking System.
+ * <p>
+ * This class only reads text and prints results. All input validation happens
+ * in {@link BankingController} and all business rules in the service layer;
+ * any {@link BankingException} they raise is shown to the user as an error message.
+ */
 public class Main {
-    
 
-    private static Scanner scanner = new Scanner(System.in);
-    private static SmartBankingSystem bankingSystem = new SmartBankingSystemImpl();
+    private static final Scanner scanner = new Scanner(System.in);
+    private static final BankingController controller = new BankingController(new SmartBankingSystemImpl());
 
     public static void main(String[] args) {
         while (true) {
-            System.out.println("\n========== SMART BANKING SYSTEM ==========");
-            System.out.println("1. Create Customer");
-            System.out.println("2. Create Account");
-            System.out.println("3. Deposit Money");
-            System.out.println("4. Withdraw Money");
-            System.out.println("5. Transfer Money");
-            System.out.println("6. Check Balance");
-            System.out.println("7. View Transaction History");
-            System.out.println("8. View All Customers");
-            System.out.println("9. Exit");
-            System.out.print("Enter choice: ");
+            printMenu();
+            String choice = prompt("Enter choice");
 
-            int choice;
             try {
-                choice = Integer.parseInt(scanner.nextLine());
-
                 switch (choice) {
-                    case 1: createCustomer(); break;
-                    case 2: createAccount(); break;
-                    case 3: depositMoney(); break;
-                    case 4: withdrawMoney(); break;
-                    case 5: transferMoney(); break;
-                    case 6: checkBalance(); break;
-                    case 7: viewTransactionHistory(); break;
-                    case 8: viewAllCustomers(); break;
-                    case 9:
+                    case "1" -> createCustomer();
+                    case "2" -> openAccount();
+                    case "3" -> makeInitialDeposit();
+                    case "4" -> depositMoney();
+                    case "5" -> withdrawMoney();
+                    case "6" -> transferMoney();
+                    case "7" -> checkBalance();
+                    case "8" -> viewTransactionHistory();
+                    case "9" -> viewAllCustomers();
+                    case "10" -> {
                         System.out.println("Thank you for using Smart Banking System. Goodbye!");
                         return;
-                    default:
-                        System.out.println("Invalid choice! Please select 1-9.");
+                    }
+                    default -> System.out.println("Invalid choice! Please select 1-10.");
                 }
-                
-            } catch (NumberFormatException e) {
-                System.out.println("Invalid input! Please enter a number between 1 and 9.");
-                continue;
-            } catch(IllegalArgumentException e) {
+            } catch (BankingException e) {
                 System.out.println("Error: " + e.getMessage());
-                continue;
             }
-
-           
         }
+    }
+
+    private static void printMenu() {
+        System.out.println("\n========== SMART BANKING SYSTEM ==========");
+        System.out.println("1. Create Customer");
+        System.out.println("2. Open Account");
+        System.out.println("3. Make Initial Deposit (activate account)");
+        System.out.println("4. Deposit Money");
+        System.out.println("5. Withdraw Money");
+        System.out.println("6. Transfer Money");
+        System.out.println("7. Check Balance");
+        System.out.println("8. View Transaction History");
+        System.out.println("9. View All Customers");
+        System.out.println("10. Exit");
+    }
+
+    /**
+     * Prints a label and reads one line of input.
+     * Exits cleanly if the input stream is closed (e.g. Ctrl+D or end of a piped file).
+     */
+    private static String prompt(String label) {
+        System.out.print(label + ": ");
+        if (!scanner.hasNextLine()) {
+            System.out.println("\nInput closed. Goodbye!");
+            System.exit(0);
+        }
+        return scanner.nextLine().trim();
     }
 
     private static void createCustomer() {
-        System.out.print("Enter Customer Name: ");
-        String name = scanner.nextLine();
-        System.out.print("Enter Email: ");
-        String email = scanner.nextLine();
+        String name = prompt("Enter Customer Name");
+        String email = prompt("Enter Email");
 
-        var customer = bankingSystem.createCustomer(name, email);
-        System.out.println("Customer Created Successfully! Customer ID: " + customer.getCustomerId());
+        Customer customer = controller.createCustomer(name, email);
+        System.out.println("Customer created successfully! Customer ID: " + customer.getCustomerId());
     }
 
-    private static void createAccount() {
-        System.out.print("Enter Customer ID: ");
-        int customerId = Integer.parseInt(scanner.nextLine());
-        System.out.print("Enter Initial Deposit (INR): ");
-        double initialDeposit = Double.parseDouble(scanner.nextLine());
-        if (initialDeposit < 0) {
-            System.out.println("Error: Initial deposit cannot be negative.");
-            return;
-        }
+    private static void openAccount() {
+        String customerId = prompt("Enter Customer ID");
 
-        var account = bankingSystem.createAccount(customerId, initialDeposit);
-        System.out.println("Account Created Successfully! Account Number: " + account.getAccountNumber());
+        Account account = controller.openAccount(customerId);
+        System.out.println("Account opened! Account Number: " + account.getAccountNumber()
+                + " | Status: " + account.getStatus());
+        System.out.println("Make an initial deposit of at least "
+                + CurrencyFormatter.format(BankingConstants.MINIMUM_BALANCE) + " (option 3) to activate it.");
+    }
+
+    private static void makeInitialDeposit() {
+        String accountNumber = prompt("Enter Account Number");
+        String amount = prompt("Enter Initial Deposit (min "
+                + CurrencyFormatter.format(BankingConstants.MINIMUM_BALANCE) + ")");
+
+        Transaction txn = controller.makeInitialDeposit(accountNumber, amount);
+        printReceipt("Initial deposit successful! Account is now ACTIVE.", txn, txn.getToAccount());
     }
 
     private static void depositMoney() {
-        System.out.print("Enter Account Number: ");
-        int accNo = Integer.parseInt(scanner.nextLine());
-        Account acc = bankingSystem.getAccount(accNo);
+        String accountNumber = prompt("Enter Account Number");
+        String amount = prompt("Enter Amount to Deposit");
 
-        System.out.print("Enter Amount to Deposit: ");
-        double amount = Double.parseDouble(scanner.nextLine());
-        if (amount <= 0) {
-            System.out.println("Error: Amount must be greater than zero.");
-            return;
-        }
-
-        var txn = bankingSystem.deposit(accNo, amount);
-        System.out.printf("Deposit Successful! Transaction ID: %s | New Balance: INR %.2f%n", txn.getTransactionId(), acc.getBalance());
+        Transaction txn = controller.deposit(accountNumber, amount);
+        printReceipt("Deposit successful!", txn, txn.getToAccount());
     }
 
     private static void withdrawMoney() {
-        System.out.print("Enter Account Number: ");
-        int accNo = Integer.parseInt(scanner.nextLine());
-        Account acc = bankingSystem.getAccount(accNo);
+        String accountNumber = prompt("Enter Account Number");
+        String amount = prompt("Enter Amount to Withdraw");
 
-        System.out.print("Enter Amount to Withdraw: ");
-        double amount = Double.parseDouble(scanner.nextLine());
-        if (amount <= 0) {
-            System.out.println("Error: Amount must be greater than zero.");
-            return;
-        }
-
-        var txn = bankingSystem.withdraw(accNo, amount);
-        if (txn != null) {
-            System.out.printf("Withdrawal Successful! Transaction ID: %s | New Balance: INR %.2f%n", txn.getTransactionId(), acc.getBalance());
-        } else {
-            System.out.println("Withdrawal Failed! Insufficient Balance.");
-        }
+        Transaction txn = controller.withdraw(accountNumber, amount);
+        printReceipt("Withdrawal successful!", txn, txn.getFromAccount());
     }
 
     private static void transferMoney() {
-        System.out.print("Enter Source Account: ");
-        int srcAccNo = Integer.parseInt(scanner.nextLine());
-        System.out.print("Enter Destination Account: ");
-        int destAccNo = Integer.parseInt(scanner.nextLine());
-        System.out.print("Enter Amount: ");
-        double amount = Double.parseDouble(scanner.nextLine());
+        String source = prompt("Enter Source Account");
+        String destination = prompt("Enter Destination Account");
+        String amount = prompt("Enter Amount");
 
-        var txn = bankingSystem.transfer(srcAccNo, destAccNo, amount);
-        System.out.printf("Transfer Successful! Transaction ID: %s | Amount: INR %.2f%n", txn.getTransactionId(), amount);
+        Transaction txn = controller.transfer(source, destination, amount);
+        printReceipt("Transfer successful!", txn, txn.getFromAccount());
     }
 
     private static void checkBalance() {
-        System.out.print("Enter Account Number: ");
-        int accNo = Integer.parseInt(scanner.nextLine());
-        Account acc = bankingSystem.getAccount(accNo);
-        System.out.printf("Current Balance for Account %d: INR %.2f%n", accNo, acc.getBalance());
+        Account account = controller.getAccount(prompt("Enter Account Number"));
+        System.out.printf("Account %s | Status: %s | Balance: %s%n",
+                account.getAccountNumber(), account.getStatus(), CurrencyFormatter.format(account.getBalance()));
     }
 
     private static void viewTransactionHistory() {
-        System.out.print("Enter Account Number: ");
-        int accNo = Integer.parseInt(scanner.nextLine());
-
-        var transactions = bankingSystem.viewTransactionHistory(accNo);
+        List<Transaction> transactions = controller.getTransactionHistory(prompt("Enter Account Number"));
         if (transactions.isEmpty()) {
             System.out.println("No transactions found for this account.");
             return;
         }
 
         System.out.println("\n--- Transaction History ---");
-        for (Transaction txn : transactions) {
-            System.out.println(txn.toString());
-        }
+        transactions.forEach(System.out::println);
     }
 
     private static void viewAllCustomers() {
-        List<Customer> customers = bankingSystem.getAllCustomers();
+        List<Customer> customers = controller.getAllCustomers();
         if (customers.isEmpty()) {
             System.out.println("No customers found.");
             return;
         }
+
         System.out.println("\n--- Customer List ---");
-        for (Customer c : customers) {
-            System.out.println(c.toString());
-        }
+        customers.forEach(System.out::println);
+    }
+
+    /** Shared success output: message, transaction ID, amount and the account's new balance. */
+    private static void printReceipt(String message, Transaction txn, String balanceAccountNumber) {
+        Account account = controller.getAccount(balanceAccountNumber);
+        System.out.printf("%s Transaction ID: %s | Amount: %s | Balance of %s: %s%n",
+                message, txn.getTransactionId(), CurrencyFormatter.format(txn.getAmount()),
+                account.getAccountNumber(), CurrencyFormatter.format(account.getBalance()));
     }
 }
