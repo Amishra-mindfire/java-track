@@ -1,6 +1,7 @@
 {
     "java.project.sourcePaths": [
-        "src/FileHandling"
+        "src/FileHandling",
+        "src/MethodReferences"
     ],
     "java.project.outputPath": "bin",
     "java.project.referencedLibraries": [
